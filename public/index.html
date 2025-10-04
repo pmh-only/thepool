@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>thepool: file upload demo</title>
+    <link rel="stylesheet" href="/assets/@picocss/pico/css/pico.min.css">
+  </head>
+  <body>
+    <main class="container">
+      <h1>thepool: file upload demo</h1>
+
+      <form id="form">
+        <input type="file" id="file">
+        <input type="submit" value="Submit">
+      </form>
+
+      <pre id="output"></pre>
+    </main>
+
+    <script>
+      const output = document.getElementById('output')
+
+      window.addEventListener('load', async () => {
+        output.innerText += 'Fetcing configurations...\n'
+
+        const response = await fetch('/api/config')
+          .then(r => r.json())
+
+        window.chunkSize = response.chunkSize
+        output.innerText += 'Complete. Chunk Size: ' + response.chunkSize + '\n'
+      })
+
+      document
+        .getElementById('form')
+        .addEventListener('submit', (ev) => {
+          ev.preventDefault()
+          output.innerText += 'file submitted\n'
+
+          const file = document.getElementById('file').files[0]
+
+          // upload logic
+        })
+    </script>
+  </body>
+</html>
