@@ -71,7 +71,10 @@ func openWebserver() {
 	})
 
 	app.Post("/api/chunks", func(c *fiber.Ctx) error {
-		chunkSizeMB := int64(c.Context().Request.Header.ContentLength())
+		reader := c.Context().RequestBodyStream()
+		chunkId := rand.Text()[:10]
+
+		chunkSizeMB := int64(c.Context().Request.Header.ContentLength())/1024/1024 + 1
 
 		if chunkSizeMB < 0 {
 			return c.Status(400).JSON(fiber.Map{
@@ -79,9 +82,6 @@ func openWebserver() {
 				"message": "content length not provided",
 			})
 		}
-
-		reader := c.Context().RequestBodyStream()
-		chunkId := rand.Text()[:10]
 
 		err := uploadChunk(chunkId, chunkSizeMB, reader)
 		if err != nil {

@@ -20,7 +20,7 @@ func createMinioConnection() {
 	var err error
 	minioClient, err = minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
-		Secure: false,
+		Secure: getEnvDefault("MINIO_ENDPOINT_SECURE", "true") != "false",
 	})
 
 	if err != nil {
@@ -34,11 +34,13 @@ func uploadChunk(chunkId string, chunkSizeMB int64, reader io.Reader) error {
 		getEnvDefault("MINIO_BUCKET_NAME", "mybucket"),
 		getEnvDefault("MINIO_BUCKET_KEY_PREFIX", "")+chunkId,
 		reader,
-		chunkSizeMB,
+		chunkSizeMB*1024*1024,
 		minio.PutObjectOptions{
 			ContentType: "application/octet-stream",
 		},
 	)
+
+	log.Println("%s", chunkId)
 
 	return err
 }

@@ -1,46 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>thepool: file upload demo</title>
-    <link rel="stylesheet" href="/assets/@picocss/pico/css/pico.min.css">
-  </head>
-  <body>
-    <main class="container">
-      <h1>thepool: file upload demo</h1>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>thepool: file upload demo</title>
+  <link rel="stylesheet" href="/assets/@picocss/pico/css/pico.min.css">
+  <style>
+    .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+    .tiny{font-size:.9rem}
+    .muted{opacity:.7}
+  </style>
+</head>
+<body>
+<main class="container">
+  <h1>thepool: file upload demo</h1>
 
-      <form id="form">
-        <input type="file" id="file">
-        <input type="submit" value="Submit">
-      </form>
+  <form id="form">
+    <fieldset>
+      <label>
+        File
+        <input type="file" id="file" multiple />
+      </label>
 
-      <pre id="output"></pre>
-    </main>
+      <!-- Disabled for streaming uploads to avoid confusion -->
+      <label class="muted">
+        Parallel worker count: <span id="parallel_count">4</span>
+        <input type="range" id="parallel" min="1" max="12" value="4" disabled />
+      </label>
+      <small class="muted">Parallelism is disabled. This path streams one request per file.</small>
+    </fieldset>
 
-    <script>
-      const output = document.getElementById('output')
+    <input type="submit" value="Submit" id="submit">
+  </form>
 
-      window.addEventListener('load', async () => {
-        output.innerText += 'Fetcing configurations...\n'
+  <div class="grid">
+    <div>
+      <h3>Output</h3>
+      <pre id="output" class="mono tiny"></pre>
+    </div>
 
-        const response = await fetch('/api/config')
-          .then(r => r.json())
+    <div>
+      <h3>Uploads</h3>
+      <div id="files"></div>
+    </div>
+  </div>
+</main>
 
-        window.chunkSize = response.chunkSize
-        output.innerText += 'Complete. Chunk Size: ' + response.chunkSize + '\n'
+<script>
+  const output = document.getElementById('output')
+  const filesPanel = document.getElementById('files')
+  const submitBtn = document.getElementById('submit')
+
+  log('Streaming mode: using ReadableStream → fetch to /api/chunks')
+  log('Server must read c.Context().RequestBodyStream()')
+
+  document.getElementById('form').addEventListener('submit', async (ev) => {
+    ev.preventDefault()
+    submitBtn.disabled = true
+
+    /** @type {FileList} */
+    const files = document.getElementById('file').files
+    if (!files || files.length === 0) {
+      log('No files selected.')
+      submitBtn.disabled = false
+      return
+    }
+
+    try {
+      for (const file of files) {
+        await uploadOneFile(file)
+      }
+      log('All files done.')
+    } catch (e) {
+      log('Upload error: ' + (e?.message || e))
+    } finally {
+      submitBtn.disabled = false
+    }
+  })
+
+  function log(line) {
+    output.textContent += line + '\n'
+    output.scrollTop = output.scrollHeight
+  }
+
+  async function uploadOneFile(file) {
+    // UI
+    const box = document.createElement('div')
+    box.innerHTML = `
+      <details open>
+        <summary><strong>${file.name}</strong> • ${formatBytes(file.size)}</summary>
+        <progress id="p" max="${file.size}" value="0" style="width:100%"></progress>
+        <div class="tiny mono" id="pt">0% • 0 / ${formatBytes(file.size)}</div>
+        <pre class="tiny mono" id="res"></pre>
+      </details>
+    `
+    filesPanel.prepend(box)
+    const p = box.querySelector('#p')
+    const pt = box.querySelector('#pt')
+    const resBox = box.querySelector('#res')
+
+    const supportsStreaming =
+      typeof file.stream === 'function' &&
+      'TransformStream' in window &&
+      // fetch upload streams require this in Chromium
+      // presence of Request.prototype.duplex in modern browsers
+      ('duplex' in new Request(''))
+
+    if (supportsStreaming) {
+      log(`Streaming: ${file.name}`)
+      const json = await uploadFileStream(file, (sent) => {
+        p.value = sent
+        const pct = Math.floor((sent / file.size) * 100)
+        pt.textContent = `${pct}% • ${formatBytes(sent)} / ${formatBytes(file.size)}`
       })
+      resBox.textContent = JSON.stringify(json, null, 2)
+    } else {
+      log(`Fallback (XHR): ${file.name}`)
+      const json = await uploadWithXHR(file, (sent) => {
+        p.value = sent
+        const pct = Math.floor((sent / file.size) * 100)
+        pt.textContent = `${pct}% • ${formatBytes(sent)} / ${formatBytes(file.size)}`
+      })
+      resBox.textContent = JSON.stringify(json, null, 2)
+    }
+  }
 
-      document
-        .getElementById('form')
-        .addEventListener('submit', (ev) => {
-          ev.preventDefault()
-          output.innerText += 'file submitted\n'
+  // True streaming upload using ReadableStream → fetch.
+  async function uploadFileStream(file, onProgress) {
+    let sent = 0
+    const metered = file.stream().pipeThrough(new TransformStream({
+      transform(chunk, controller) {
+        sent += chunk.byteLength
+        onProgress?.(sent)
+        controller.enqueue(chunk)
+      }
+    }))
 
-          const file = document.getElementById('file').files[0]
+    const res = await fetch('/api/chunks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-File-Name': encodeURIComponent(file.name),
+        'X-File-Size': String(file.size)
+      },
+      body: metered,
+      // Required by Chromium for request streams
+      duplex: 'half'
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json()
+  }
 
-          // upload logic
-        })
-    </script>
-  </body>
+  // Fallback: XHR buffered upload with progress.
+  function uploadWithXHR(file, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', '/api/chunks', true)
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream')
+      xhr.setRequestHeader('X-File-Name', encodeURIComponent(file.name))
+      xhr.setRequestHeader('X-File-Size', String(file.size))
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress?.(e.loaded)
+      }
+      xhr.onerror = () => reject(new Error('Network error'))
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState !== 4) return
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try { resolve(JSON.parse(xhr.responseText || '{}')) }
+          catch { resolve({}) }
+        } else reject(new Error(`HTTP ${xhr.status}`))
+      }
+      xhr.send(file) // sends as a single body with Content-Length
+    })
+  }
+
+  function formatBytes(n) {
+    if (n < 1024) return `${n} B`
+    const u = ['KB','MB','GB','TB']
+    let i = -1
+    do { n /= 1024; i++ } while (n >= 1024 && i < u.length - 1)
+    return `${n.toFixed(n >= 100 ? 0 : n >= 10 ? 1 : 2)} ${u[i]}`
+  }
+</script>
+</body>
 </html>

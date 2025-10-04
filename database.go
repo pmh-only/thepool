@@ -35,7 +35,7 @@ func createMysqlConnection() {
 }
 
 func createChunk(chunkId string, chunkSizeMB int64) {
-	stmt, err := db.Prepare("INSERT INTO chunks (chunk_id, chunk_size_mb) VALUES (?, ?, ?)")
+	stmt, err := db.Prepare("INSERT INTO chunks (chunk_id, chunk_size_mb) VALUES (?, ?)")
 	if err != nil {
 		log.Fatal(err)
 	}
