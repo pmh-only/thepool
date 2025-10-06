@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"io"
 	"log"
+	"net"
+	"net/http"
+	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -17,10 +21,27 @@ func createMinioConnection() {
 	accessKeyID := getEnvMust("MINIO_ACCESS_KEY_ID")
 	secretAccessKey := getEnvMust("MINIO_SECRET_ACCESS_KEY")
 
+	var transport http.RoundTripper = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+		DisableCompression: true,
+	}
+
 	var err error
 	minioClient, err = minio.New(endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
-		Secure: getEnvDefault("MINIO_ENDPOINT_SECURE", "true") != "false",
+		Creds:     credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
+		Secure:    getEnvDefault("MINIO_ENDPOINT_SECURE", "true") != "false",
+		Transport: transport,
 	})
 
 	if err != nil {

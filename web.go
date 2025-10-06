@@ -32,6 +32,11 @@ func openWebserver() {
 			return
 		}
 
+		if p == "/" {
+			http.ServeFile(w, r, filepath.Join(publicDir, "index.html"))
+			return
+		}
+
 		http.ServeFile(w, r, filepath.Join(publicDir, "download.html"))
 	})
 
