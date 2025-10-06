@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -48,7 +47,7 @@ func createChunk(chunkId string, chunkSizeMB int64) {
 }
 
 func createCollection(collection Collection) {
-	stmt, err := db.Prepare("INSERT INTO collections (collection_id, file_original_name, file_mime_type, chunk_ids) VALUES (?, ?, ?)")
+	stmt, err := db.Prepare("INSERT INTO collections (collection_id, file_original_name, file_mime_type, chunk_ids) VALUES (?, ?, ?, ?)")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,7 +58,7 @@ func createCollection(collection Collection) {
 		collection.CollectionId,
 		collection.OriginalName,
 		collection.MimeType,
-		strings.Join(collection.ChunkIds, ","),
+		collection.ChunkIds,
 	)
 
 	if err != nil {
@@ -67,7 +66,7 @@ func createCollection(collection Collection) {
 	}
 }
 
-func getCollection(collectionId string) (collection *Collection) {
+func getCollection(collectionId string) *Collection {
 	stmt, err := db.Prepare("SELECT * FROM collections WHERE collection_id = ?")
 	if err != nil {
 		log.Fatal(err)
@@ -75,7 +74,13 @@ func getCollection(collectionId string) (collection *Collection) {
 
 	defer stmt.Close()
 
-	err = stmt.QueryRow(collectionId).Scan(collection)
+	var collection Collection
+	err = stmt.QueryRow(collectionId).Scan(
+		&collection.CollectionId,
+		&collection.OriginalName,
+		&collection.MimeType,
+		&collection.ChunkIds)
+
 	if err == sql.ErrNoRows {
 		return nil
 	}
@@ -84,7 +89,7 @@ func getCollection(collectionId string) (collection *Collection) {
 		log.Fatal(err)
 	}
 
-	return
+	return &collection
 }
 
 func purgeChunk(chunkLimit int64) (chunkIds []string) {

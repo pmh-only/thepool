@@ -40,8 +40,6 @@ func uploadChunk(chunkId string, chunkSizeMB int64, reader io.Reader) error {
 		},
 	)
 
-	log.Println("%s", chunkId)
-
 	return err
 }
 
