@@ -15,6 +15,7 @@ import (
 func openWebserver() {
 	port := getEnvDefault("WEBSERVER_PORT", "8080")
 	sizeLimitMBRaw := getEnvDefault("WEBSERVER_SIZE_LIMIT_MB", "128")
+	staticEndpoint := getEnvMust("WEBSERVER_STATIC_ENDPOINT_PREFIX")
 
 	sizeLimitMB, err := strconv.ParseInt(sizeLimitMBRaw, 10, 64)
 	if err != nil || sizeLimitMB <= 0 {
@@ -31,14 +32,14 @@ func openWebserver() {
 			return
 		}
 
-		http.ServeFile(w, r, filepath.Join(publicDir, "index.html"))
+		http.ServeFile(w, r, filepath.Join(publicDir, "download.html"))
 	})
 
 	assets := http.StripPrefix("/assets/", http.FileServer(http.Dir("./node_modules")))
 	mux.Handle("/assets/", logmw(assets))
 
 	mux.Handle("/api/config", logmw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{"chunkSize": sizeLimitMB})
+		writeJSON(w, http.StatusOK, map[string]any{"chunkSize": sizeLimitMB, "download": staticEndpoint})
 	})))
 
 	mux.Handle("/api/collections/", logmw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
