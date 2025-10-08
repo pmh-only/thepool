@@ -4,7 +4,7 @@ function log (s, { error = false, success = false } = { error: false, success: f
       data-prefix=">"
       ${error ? 'class="text-error"' : ''}
       ${success ? 'class="text-success"' : ''}
-    ><code class="ff-mono text-xl whitespace-nowrap">${s}</code></pre>`
+    ><code class="ff-mono text-xl whitespace-nowrap pr-6">${s}</code></pre>`
 }
 
 function setEnable (enabled = true) {

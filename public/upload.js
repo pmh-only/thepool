@@ -63,18 +63,23 @@ async function uploadFileParallelStreaming (file, chunkSize, workers) {
   const box = document.createElement('div')
   box.innerHTML = `
     <div tabindex="0" class="collapse collapse-arrow bg-base-100 border-base-300 border">
-      <div class="collapse-title font-semibold flex gap-6">
-        <div id="fprog" class="radial-progress" style="--value:0;" role="progressbar">0%</div>
-        <div>
-          <p><strong>${file.name}</strong> • ${total} chunk(s)</p>
-          <p id="ftext">0% • 0 / ${formatBytes(file.size)}</p>
-          <p id="flink"><span class="loading loading-dots loading-xs"></span></p>
-
-          <button class="btn" id="fbtn" disabled>Copy Link<button>
+      <div class="collapse-title font-semibold flex gap-6 items-center">
+        <div id="fprog" class="radial-progress" style="--value: 0;" role="progressbar">0%</div>
+        <div class="flex flex-1 grow flex-col sm:flex-row gap-2">
+          <div class="flex-1 grow">
+            <p><strong>${file.name}</strong> • ${total} chunk(s)</p>
+            <p id="ftext">0% • 0 / ${formatBytes(file.size)}</p>
+          </div>
+          <div id="flink" class="flex gap-4">
+            <span class="loading loading-dots loading-xl"></span>
+            <button class="btn" id="fbtn" disabled>Copy Link<button>
+          </div>
         </div>
       </div>
       <div class="collapse-content text-sm">
-        <div id="rows" class="flex flex-wrap gap-6"></div>
+        <ul id="rows" class="list">
+          <li class="p-4 pb-2 text-xs opacity-60 tracking-wide">File chunks</li>
+        </ul>
       </div>
     </div>
   `
@@ -87,18 +92,21 @@ async function uploadFileParallelStreaming (file, chunkSize, workers) {
   const rows  = box.querySelector('#rows')
 
   const row = tasks.map((t,i) => {
-    const div = document.createElement('div')
-    div.innerHTML = `
-      <div>
-        <span>Chunk #${i+1}: 0 / ${formatBytes(t.size)} (0%)</span>
-        <progress class="progress w-56" max="${t.size}" value="0"></progress>
-      </div>
+    const li = document.createElement('li')
+    li.innerHTML = `
+      <li class="list-row">
+        <div class="text-4xl font-thin opacity-30 tabular-nums">${(i+1).toString().padStart(2, '0')}</div>
+        <div class="list-col-grow">
+          <div>Chunk #${i+1}: 0 / ${formatBytes(t.size)} (0%)</div>
+          <progress class="progress w-full" max="${t.size}" value="0"></progress>
+        </div>
+      </li>
     `
-    rows.appendChild(div)
+    rows.appendChild(li)
 
     return {
-      prog: div.querySelector('progress'),
-      txt: div.querySelector('span')
+      prog: li.querySelector('progress'),
+      txt: li.querySelector('span')
     }
   })
 
