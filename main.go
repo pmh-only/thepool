@@ -7,7 +7,5 @@ func main() {
 	createMinioConnection()
 
 	go startPurgeJobLoop()
-
-	setupMux()
 	openWebserver()
 }
