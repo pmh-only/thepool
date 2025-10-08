@@ -18,8 +18,12 @@ var downloadViewHandler = httpLogFn(func(w http.ResponseWriter, r *http.Request)
 	http.ServeFile(w, r, filepath.Join("./views", "download.html"))
 })
 
+var staticLibrariesHandler = httpLog(
+	http.StripPrefix("/lib", http.FileServer(http.Dir("./node_modules"))),
+)
+
 var staticAssetsHandler = httpLog(
-	http.StripPrefix("/assets/", http.FileServer(http.Dir("./node_modules"))),
+	http.StripPrefix("/assets", http.FileServer(http.Dir("./public"))),
 )
 
 //

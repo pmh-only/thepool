@@ -1,209 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>thepool: parallel streaming download</title>
-  <link rel="stylesheet" href="/assets/@picocss/pico/css/pico.min.css">
-  <style>
-    .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
-    .tiny{font-size:.9rem}
-  </style>
-</head>
-<body>
-  <main class="container">
-    <h1>thepool: parallel streaming download</h1>
-    <form id="form">
-      <fieldset>
-        <label>
-          Collection ID
-          <input id="collection" type="text" placeholder="loading..." required disabled />
-        </label>
-        <label>
-          Parallel workers: <span id="parallel_count">6</span>
-          <input type="range" id="parallel" min="1" max="12" value="6" />
-        </label>
-      </fieldset>
-      <input type="submit" id="submit" value="Download">
-    </form>
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 
-    <div class="grid">
-      <div>
-        <h3>Output</h3>
-        <pre id="log" class="mono tiny"></pre>
+    <title>thepool: parallel streaming download</title>
+
+    <link rel="stylesheet" href="/assets/style.output.css">
+    <link rel="stylesheet" href="/lib/@fontsource/vt323/index.css">
+    <link rel="stylesheet" href="/lib/@fontsource-variable/roboto/index.css">
+    <link rel="stylesheet" href="/lib/@fontsource-variable/merriweather/index.css">
+  </head>
+  <body>
+    <nav class="navbar bg-base-100 shadow-sm">
+      <a class="btn btn-ghost text-xl ff-display">thepool.</a>
+    </nav>
+
+    <main class="flex-1 grow container py-8 px-4 m-auto flex flex-col gap-6 items-end">
+      <div class="flex gap-6 flex-wrap w-full flex-1 grow flex-col lg:flex-row">
+        <form id="form" class="w-fit">
+          <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
+            <legend class="fieldset-legend">Download file</legend>
+  
+            <label class="label">Collection ID</label>
+            <input class="file-input" id="collection" type="text" placeholder="loading..." required disabled />
+  
+            <label class="mt-2 label">Parallel workers: <span id="parallel_count" class="font-bold">6</span></label>
+            <div class="w-full max-w-xs">
+              <input class="range" type="range" id="parallel" min="1" max="12" value="6" />
+              <div class="flex justify-between px-2 mt-1 text-lg ff-mono">
+                <span>1</span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span>6</span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span>F</span>
+              </div>
+            </div>
+            
+            <button type="submit" id="submit" class="btn btn-primary mt-4">
+              Parallel Download
+            </button>
+          </fieldset>
+        </form>
+  
+        <fieldset class="fieldset bg-base-200 border-base-300 rounded-box grow flex-1 border p-4">
+          <legend class="fieldset-legend">Download tasks</legend>
+          <div id="panel"></div>
+        </fieldset>
       </div>
-      <div>
-        <h3>Downloads</h3>
-        <div id="panel"></div>
-      </div>
-    </div>
-  </main>
 
-  <script>
-    const logEl = document.getElementById('log');
-    const panel = document.getElementById('panel');
-    const submit = document.getElementById('submit');
-    const parallelEl = document.getElementById('parallel');
-    const parallelCountEl = document.getElementById('parallel_count');
-    parallelEl.addEventListener('input', () => parallelCountEl.textContent = parallelEl.value);
+      <div class="mockup-code w-full max-w-2xl" id="log"></div>
+    </main>
 
-    let download; // base URL for chunks
-    fetch('/api/config').then(r=>r.json()).then(cfg=>{
-      download = cfg.download;
-      log('Config loaded.');
-    });
-
-    const id  = window.location.pathname.replace('/', '');
-    document.getElementById('collection').value = id;
-
-    function log(s){ logEl.textContent += s+'\n'; logEl.scrollTop = logEl.scrollHeight }
-    function formatBytes(n){
-      if (n<1024) return `${n} B`;
-      const u=['KB','MB','GB','TB']; let i=-1;
-      do{ n/=1024; i++ }while(n>=1024 && i<u.length-1);
-      return `${n.toFixed(n>=100?0:n>=10?1:2)} ${u[i]}`;
-    }
-
-    // Open picker inside user gesture, then start
-    document.getElementById('form').addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      if(!id){ log('No collection id.'); return }
-      submit.disabled = true;
-
-      try{
-        await downloadCollectionParallel(id, +parallelEl.value);
-        log('All done.');
-      }catch(err){
-        log('Error: '+(err?.message||err));
-      }finally{
-        submit.disabled = false;
-      }
-    });
-
-    async function downloadCollectionParallel(collectionId, workers){
-      log(`Fetching collection: ${collectionId}`);
-      const meta = await fetch(`/api/collections/${encodeURIComponent(collectionId)}`).then(r=>{
-        if(!r.ok) throw new Error(`HTTP ${r.status} loading collection`);
-        return r.json();
-      });
-
-      const name = meta.data.originalName || `download-${collectionId}`;
-      const mime = meta.data.mimeType || 'application/octet-stream';
-      const chunkIds = meta.data.chunkIds.match(/.{1,10}/g);
-      const total = chunkIds.length;
-      log(`File: ${name} • ${total} chunk(s)`);
-      
-
-      let saveHandle;
-      try{
-        saveHandle = await window.showSaveFilePicker({
-          suggestedName: name,
-          types: [{ accept: { [mime]: ['.'+name.split('.')[name.split('.').length - 1] ??'.bin'] } }],
-        });
-      }catch(err){
-        console.log(err)
-        submit.disabled = false;
-        log('Picker canceled.');
-        return;
-      }
-
-      // UI (no progress bars; text only)
-      const box = document.createElement('div');
-      box.innerHTML = `
-        <details open>
-          <summary>
-            <strong>${name}</strong> • ${total} chunk(s)
-            <div class="tiny mono" id="ftext">0 downloaded</div>
-          </summary>
-          <ul id="rows"></ul>
-        </details>
-      `;
-      panel.prepend(box);
-      const ftext = box.querySelector('#ftext');
-      const rows  = box.querySelector('#rows');
-
-      const row = chunkIds.map((cid,i)=>{
-        const li = document.createElement('li');
-        li.innerHTML = `
-          <div class="grid">
-            <span class="tiny mono">Chunk #${i+1} (${cid.slice(0,8)}…): 0 B</span>
-          </div>
-        `;
-        rows.appendChild(li);
-        return { txt: li.querySelector('span') };
-      });
-
-      // Use OPFS temp files to avoid RAM spikes
-      const root = await navigator.storage.getDirectory();
-      const tmpDirName = `dl-${collectionId}-${Date.now()}`;
-      const tmpDir = await root.getDirectoryHandle(tmpDirName, { create: true });
-
-      let next = 0;
-      const tempFiles = new Array(total);
-
-      // running total; total size unknown
-      let downloaded = 0;
-      let lastReport = 0;
-      const REPORT_MS = 500;
-      function maybeReport(){
-        const now = performance.now();
-        if (now - lastReport >= REPORT_MS){
-          ftext.textContent = `${formatBytes(downloaded)} downloaded`;
-          lastReport = now;
-        }
-      }
-
-      async function worker(){
-        while(true){
-          const i = next++;
-          if(i >= total) return;
-          const cid = chunkIds[i];
-          log(`start ${i+1}/${total} ${cid.slice(0,8)}…`);
-
-          const res = await fetch(`${download}/${encodeURIComponent(cid)}`);
-          if(!res.ok) throw new Error(`Chunk ${cid} missing or expired`);
-
-          const fh = await tmpDir.getFileHandle(`part-${String(i).padStart(8,'0')}`, { create: true });
-          const ws = await fh.createWritable();
-
-          const reader = res.body.getReader();
-          let loaded = 0;
-          while(true){
-            const {done, value} = await reader.read();
-            if(done) break;
-            await ws.write(value);
-            loaded += value.byteLength;
-            downloaded += value.byteLength;
-            row[i].txt.textContent = `Chunk #${i+1} (${cid.slice(0,8)}…): ${formatBytes(loaded)}`;
-            maybeReport();
-          }
-          await ws.close();
-          tempFiles[i] = fh;
-          log(`done  ${i+1}/${total}`);
-        }
-      }
-
-      await Promise.all(Array.from({length: Math.min(workers, total)}, worker));
-
-      // Stitch: OPFS -> final file, streaming
-      const out = await saveHandle.createWritable();
-      for(let i=0;i<total;i++){
-        const file = await tempFiles[i].getFile();
-        const reader = file.stream().getReader();
-        while(true){
-          const {done, value} = await reader.read();
-          if(done) break;
-          await out.write(value);
-        }
-        await tmpDir.removeEntry(tempFiles[i].name);
-      }
-      await out.close();
-      await root.removeEntry(tmpDirName, { recursive: true });
-
-      // final textual report
-      ftext.textContent = `${formatBytes(downloaded)} downloaded`;
-      log(`File complete: ${name}`);
-    }
-  </script>
-</body>
+    <script src="/assets/commons.js"></script>
+    <script src="/assets/download.js"></script>
+  </body>
 </html>

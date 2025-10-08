@@ -11,6 +11,7 @@ func openWebserver() {
 
 	mux.Handle("GET /", indexViewHandler)
 	mux.Handle("GET /{id}", downloadViewHandler)
+	mux.Handle("GET /lib/{path...}", staticLibrariesHandler)
 	mux.Handle("GET /assets/{path...}", staticAssetsHandler)
 
 	mux.Handle("GET /api/config", configStatusHandler)

@@ -1,0 +1,19 @@
+@import "tailwindcss" source(none);
+@source "../{public,views}/*.{html,js}";
+@plugin "daisyui";
+
+body {
+  font-family: 'Roboto Variable', sans-serif;
+  user-select: none;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.ff-display {
+  font-family: 'Merriweather Variable', serif;
+}
+
+.ff-mono {
+  font-family: 'VT323', monospace;
+}

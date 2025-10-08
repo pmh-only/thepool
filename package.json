@@ -1,5 +1,16 @@
 {
+  "scripts": {
+    "dev": "nodemon -e html,css,js --exec 'npx @tailwindcss/cli -i public/style.css -o public/style.output.css'"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.14",
+    "daisyui": "^5.1.29",
+    "nodemon": "^3.1.10",
+    "tailwindcss": "^4.1.14"
+  },
   "dependencies": {
-    "@picocss/pico": "^2.1.1"
+    "@fontsource-variable/merriweather": "^5.2.6",
+    "@fontsource-variable/roboto": "^5.2.8",
+    "@fontsource/vt323": "^5.2.7"
   }
 }
