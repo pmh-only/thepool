@@ -16,11 +16,6 @@ import (
 var minioClient *minio.Client
 
 func createMinioConnection() {
-	endpoint := getEnvMust("MINIO_ENDPOINT")
-
-	accessKeyID := getEnvMust("MINIO_ACCESS_KEY_ID")
-	secretAccessKey := getEnvMust("MINIO_SECRET_ACCESS_KEY")
-
 	var transport http.RoundTripper = &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
@@ -38,24 +33,27 @@ func createMinioConnection() {
 	}
 
 	var err error
-	minioClient, err = minio.New(endpoint, &minio.Options{
-		Creds:     credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
-		Secure:    getEnvDefault("MINIO_ENDPOINT_SECURE", "true") != "false",
+	minioClient, err = minio.New(MINIO_ENDPOINT, &minio.Options{
+		Creds: credentials.NewStaticV4(
+			MINIO_ACCESS_KEY_ID,
+			MINIO_SECRET_ACCESS_KEY,
+			""),
+		Secure:    MINIO_ENDPOINT_SECURE,
 		Transport: transport,
 	})
 
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal(err)
 	}
 }
 
-func uploadChunk(chunkId string, chunkSizeMB int64, reader io.Reader) error {
+func uploadChunk(chunkId string, reader io.Reader) error {
 	_, err := minioClient.PutObject(
 		context.Background(),
-		getEnvDefault("MINIO_BUCKET_NAME", "mybucket"),
-		getEnvDefault("MINIO_BUCKET_KEY_PREFIX", "")+chunkId,
+		MINIO_BUCKET_NAME,
+		MINIO_BUCKET_KEY_PREFIX+chunkId,
 		reader,
-		chunkSizeMB*1024*1024,
+		-1,
 		minio.PutObjectOptions{
 			ContentType: "application/octet-stream",
 		},
@@ -64,12 +62,12 @@ func uploadChunk(chunkId string, chunkSizeMB int64, reader io.Reader) error {
 	return err
 }
 
-func deleteChunk(chunkIds []string) {
+func deleteChunks(chunkIds []string) {
 	for _, chunkId := range chunkIds {
 		minioClient.RemoveObject(
 			context.Background(),
-			getEnvDefault("MINIO_BUCKET_NAME", "mybucket"),
-			getEnvDefault("MINIO_BUCKET_KEY_PREFIX", "")+chunkId,
+			MINIO_BUCKET_NAME,
+			MINIO_BUCKET_KEY_PREFIX+chunkId,
 			minio.RemoveObjectOptions{
 				ForceDelete:      true,
 				GovernanceBypass: true,

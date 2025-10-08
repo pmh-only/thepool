@@ -28,6 +28,7 @@ COPY --from=build --chown=$user:$group /tmp/ /tmp/
 COPY --from=build --chown=$user:$group /app/main .
 COPY --from=build --chown=$user:$group /app/node_modules/ ./node_modules/
 
-COPY --chown=$user:$group ./public/ ./public/
+COPY --chown=$user:$group ./views/ ./views/
+
 
 ENTRYPOINT ["/app/main"]

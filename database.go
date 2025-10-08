@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"log"
-	"os"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -14,12 +13,11 @@ func createMysqlConnection() {
 	cfg := mysql.NewConfig()
 
 	cfg.Net = "tcp"
-	cfg.User = getEnvMust("DATABASE_USER")
-	cfg.Passwd = os.Getenv("DATABASE_PASSWORD")
-	cfg.DBName = getEnvMust("DATABASE_SCHEMA")
+	cfg.User = DATABASE_USER
+	cfg.Passwd = DATABASE_PASSWORD
+	cfg.DBName = DATABASE_SCHEMA
 
-	cfg.Addr = getEnvMust("DATABASE_HOST") +
-		":" + getEnvDefault("DATABASE_PORT", "3306")
+	cfg.Addr = DATABASE_HOST + ":" + DATABASE_PORT
 
 	var err error
 	db, err = sql.Open("mysql", cfg.FormatDSN())
@@ -27,9 +25,9 @@ func createMysqlConnection() {
 		log.Fatal(err)
 	}
 
-	pingErr := db.Ping()
-	if pingErr != nil {
-		log.Fatal(pingErr)
+	err = db.Ping()
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
