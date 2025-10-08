@@ -44,6 +44,6 @@ COPY --from=library --chown=$user:$group /app/node_modules/ ./node_modules/
 
 COPY --chown=$user:$group ./views/ ./views/
 COPY --chown=$user:$group ./public/ ./public/
-COPY --chown=$user:$group ./public/style.output.css ./public/style.output.css
+COPY --from=build --chown=$user:$group /app/public/style.output.css ./public/style.output.css
 
 ENTRYPOINT ["/app/main"]
