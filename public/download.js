@@ -62,7 +62,9 @@ async function downloadCollectionParallel (collectionId, workers) {
         </div>
       </div>
       <div class="collapse-content text-sm">
-        <div id="rows" class="flex flex-wrap gap-6"></div>
+        <ul id="rows" class="list">
+          <li class="p-4 pb-2 text-xs opacity-60 tracking-wide">File chunks</li>
+        </ul>
       </div>
     </div>
   `
@@ -72,17 +74,19 @@ async function downloadCollectionParallel (collectionId, workers) {
   const rows  = box.querySelector('#rows')
 
   const row = chunkIds.map((cid, i) => {
-    const div = document.createElement('div')
-    div.innerHTML = `
-      <div>
-        <span>Chunk #${i+1} (${cid}...): 0 B</span>
+    const li = document.createElement('li')
+    li.innerHTML = `
+      <div class="text-4xl font-thin opacity-30 tabular-nums">${(i+1).toString().padStart(2, '0')}</div>
+      <div class="list-col-grow">
+        <div><span>Chunk #${i+1} (${cid}...): 0 B</span></div>
       </div>
     `
 
-    rows.appendChild(div)
+    rows.appendChild(li)
+    li.classList.add('list-row')
 
     return {
-      txt: div.querySelector('span')
+      txt: li.querySelector('span')
     }
   })
 

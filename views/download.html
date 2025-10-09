@@ -18,16 +18,17 @@
 
     <main class="flex-1 grow container py-8 px-4 m-auto flex flex-col gap-6 items-end">
       <div class="flex gap-6 flex-wrap w-full flex-1 grow flex-col lg:flex-row">
-        <form id="form" class="w-fit">
-          <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
+        <div class="flex flex-col gap-6 lg:max-w-sm w-full">
+        <form id="form">
+          <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border p-4">
             <legend class="fieldset-legend">Download file</legend>
   
             <label class="label">Collection ID</label>
-            <input class="file-input" id="collection" type="text" placeholder="loading..." required disabled />
+            <input class="file-input w-full" id="collection" type="text" placeholder="loading..." required disabled />
   
             <label class="mt-2 label">Parallel workers: <span id="parallel_count" class="font-bold">6</span></label>
-            <div class="w-full max-w-xs">
-              <input class="range" type="range" id="parallel" min="1" max="12" value="6" />
+            <div class="w-full">
+              <input class="range w-full" type="range" id="parallel" min="1" max="12" value="6" />
               <div class="flex justify-between px-2 mt-1 text-lg ff-mono">
                 <span>1</span>
                 <span></span>
@@ -49,16 +50,20 @@
             </button>
           </fieldset>
         </form>
+
+          <div class="mockup-code w-full flex-1 grow overflow-auto hidden lg:block" id="log"></div>
+        </div>
   
         <fieldset class="fieldset bg-base-200 border-base-300 rounded-box grow flex-1 border p-4">
           <legend class="fieldset-legend">Download tasks</legend>
-          <div id="panel"></div>
+          <div id="panel" class="flex flex-col gap-2">
+
+          </div>
         </fieldset>
       </div>
 
-      <div class="mockup-code w-full max-w-2xl" id="log"></div>
     </main>
-
+    
     <script src="/assets/commons.js"></script>
     <script src="/assets/download.js"></script>
   </body>

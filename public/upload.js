@@ -96,15 +96,15 @@ async function uploadFileParallelStreaming (file, chunkSize, workers) {
   const row = tasks.map((t,i) => {
     const li = document.createElement('li')
     li.innerHTML = `
-      <li class="list-row">
-        <div class="text-4xl font-thin opacity-30 tabular-nums">${(i+1).toString().padStart(2, '0')}</div>
-        <div class="list-col-grow">
-          <div><span>Chunk #${i+1}: 0 / ${formatBytes(t.size)} (0%)</span></div>
-          <progress class="progress w-full" max="${t.size}" value="0"></progress>
-        </div>
-      </li>
+      <div class="text-4xl font-thin opacity-30 tabular-nums">${(i+1).toString().padStart(2, '0')}</div>
+      <div class="list-col-grow">
+        <div><span>Chunk #${i+1}: 0 / ${formatBytes(t.size)} (0%)</span></div>
+        <progress class="progress w-full" max="${t.size}" value="0"></progress>
+      </div>
     `
+
     rows.appendChild(li)
+    li.classList.add('list-row')
 
     return {
       prog: li.querySelector('progress'),
