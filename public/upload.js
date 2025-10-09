@@ -70,8 +70,10 @@ async function uploadFileParallelStreaming (file, chunkSize, workers) {
             <p><strong>${file.name}</strong> • ${total} chunk(s)</p>
             <p id="ftext">0% • 0 / ${formatBytes(file.size)}</p>
           </div>
-          <div id="flink" class="flex gap-4">
-            <span class="loading loading-dots loading-xl"></span>
+          <div class="flex flex-col gap-2 items-end">
+            <span id="flink" class="flex items-center">
+              <span class="loading loading-dots loading-xl"></span>
+            </span>
             <button class="btn" id="fbtn" disabled>Copy Link<button>
           </div>
         </div>
@@ -97,7 +99,7 @@ async function uploadFileParallelStreaming (file, chunkSize, workers) {
       <li class="list-row">
         <div class="text-4xl font-thin opacity-30 tabular-nums">${(i+1).toString().padStart(2, '0')}</div>
         <div class="list-col-grow">
-          <div>Chunk #${i+1}: 0 / ${formatBytes(t.size)} (0%)</div>
+          <div><span>Chunk #${i+1}: 0 / ${formatBytes(t.size)} (0%)</span></div>
           <progress class="progress w-full" max="${t.size}" value="0"></progress>
         </div>
       </li>
