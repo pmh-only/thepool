@@ -96,6 +96,33 @@ var createChunkHandler = httpLogFn(func(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	chunkSizeRaw := r.Header["X-Thepool-Chunk-Size"]
+	if len(chunkOrderRaw) < 1 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"success": false,
+			"message": "no chunk size provided",
+		})
+		return
+	}
+
+	chunkSize, err := strconv.ParseInt(chunkSizeRaw[0], 10, 64)
+
+	if err != nil || chunkSize < 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"success": false,
+			"message": "Invalid chunk size",
+		})
+		return
+	}
+
+	if chunkSize > WEBSERVER_SIZE_LIMIT_MB*MB {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"success": false,
+			"message": "Chunk size too large",
+		})
+		return
+	}
+
 	limitedReader := &io.LimitedReader{
 		R: r.Body,
 		N: WEBSERVER_SIZE_LIMIT_MB*MB + 1,
@@ -106,13 +133,22 @@ var createChunkHandler = httpLogFn(func(w http.ResponseWriter, r *http.Request) 
 	}
 
 	chunkID := randID(10)
-	err = uploadChunk(chunkID, countableReader)
+	err = uploadChunk(chunkID, chunkSize, countableReader)
 
 	if err != nil {
 		deleteChunks([]string{chunkID})
 		writeJSON(w, http.StatusInternalServerError, map[string]any{
 			"success": false,
 			"message": err.Error(),
+		})
+		return
+	}
+
+	if countableReader.Bytes != chunkSize {
+		deleteChunks([]string{chunkID})
+		writeJSON(w, http.StatusRequestEntityTooLarge, map[string]any{
+			"success": false,
+			"message": "payload size invalid",
 		})
 		return
 	}

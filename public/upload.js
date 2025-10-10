@@ -39,7 +39,7 @@ function planChunks (size, chunkSize) {
   let idx = 0
 
   while (start < size) {
-    const end = Math.min(start + chunkSize, size)
+    const end = Math.floor(Math.min(start + chunkSize, size))
 
     arr.push({
       index:idx++,
@@ -148,6 +148,7 @@ async function uploadFileParallelStreaming (file, chunkSize, workers) {
         headers: {
           'Content-Type': 'application/octet-stream',
           'X-Thepool-Chunk-Order': i.toString(),
+          'X-Thepool-Chunk-Size': t.size.toString(),
           'X-haha': 'Do you wanna automate this? don\'t waste your time!'
         },
         body: metered,

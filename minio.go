@@ -47,13 +47,13 @@ func createMinioConnection() {
 	}
 }
 
-func uploadChunk(chunkId string, reader io.Reader) error {
+func uploadChunk(chunkId string, chunkSize int64, reader io.Reader) error {
 	_, err := minioClient.PutObject(
 		context.Background(),
 		MINIO_BUCKET_NAME,
 		MINIO_BUCKET_KEY_PREFIX+chunkId,
 		reader,
-		-1,
+		chunkSize,
 		minio.PutObjectOptions{
 			ContentType: "application/octet-stream",
 		},
