@@ -65,7 +65,7 @@ async function loadCollectionConfig () {
 
       setEnable(false)
       
-      await downloadCollectionParallel(collectionId, meta, fprog, ftext, row)
+      await downloadCollectionParallel(collectionId, meta, fprog, ftext, rows, row)
         .catch((err) => {
           log(`Error for file: ${err?.message ?? err}`, { error: true })
         })
@@ -75,7 +75,7 @@ async function loadCollectionConfig () {
     })
 }
 
-async function downloadCollectionParallel (collectionId, meta, fprog, ftext, row) {
+async function downloadCollectionParallel (collectionId, meta, fprog, ftext, rows, row) {
   const workers = +parallelEl.value
   const name = meta.data.originalName
   const mime = meta.data.mimeType
@@ -153,13 +153,15 @@ async function downloadCollectionParallel (collectionId, meta, fprog, ftext, row
         if (done) break
         
         await ws.write(value)
-        const pct = Math.floor(chunkDownloaded / chunk.size * 100)
         
         chunkDownloaded += value.byteLength
+        
+        const pct = Math.floor(chunkDownloaded / chunk.size * 100)
+
         row[i].prog.value = chunkDownloaded
         row[i].txt.textContent = `Chunk #${i+1} (${chunk.id}): ${formatBytes(chunkDownloaded)} / ${formatBytes(chunk.size)} (${pct}%)`
         
-        bumpFile(chunk.size)
+        bumpFile(value.byteLength)
         maybeReport()
       }
 
@@ -172,6 +174,19 @@ async function downloadCollectionParallel (collectionId, meta, fprog, ftext, row
 
   const workerSet = Array.from({ length: Math.min(workers, total) }, worker)
   await Promise.all(workerSet)
+
+  
+  const li = document.createElement('li')
+  li.innerHTML = `
+    <div class="text-4xl font-thin opacity-30 tabular-nums">FF</div>
+    <div class="list-col-grow">
+      <div><span>Merge chunks</span></div>
+      <progress class="progress w-full" ></progress>
+    </div>
+  `
+
+  rows.appendChild(li)
+  li.classList.add('list-row')
 
   const out = await saveHandle.createWritable()
 
@@ -191,6 +206,8 @@ async function downloadCollectionParallel (collectionId, meta, fprog, ftext, row
 
   await out.close();
   await root.removeEntry(tmpDirName, { recursive: true })
+
+  rows.removeChild(li)
 
   ftext.textContent = `${formatBytes(fileDownloaded)} downloaded`
   log(`File complete: ${name}`)
