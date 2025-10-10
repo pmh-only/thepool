@@ -8,10 +8,28 @@ parallelEl.addEventListener('input', () => {
 loadCollectionConfig()
 async function loadCollectionConfig () {
   const collectionId = window.location.pathname.replace('/', '')
+  document.getElementById('collection').innerText = collectionId
+
 
   log(`Fetching collection: ${collectionId}`)
   const meta = await fetch(`/api/collections/${encodeURIComponent(collectionId)}`)
     .then((res) => res.json())
+    .catch(() => undefined)
+
+  if (meta === undefined || !meta.success) {
+    const alert = document.createElement('div')
+    alert.innerHTML = `
+      <div role="alert" class="alert alert-error alert-soft">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span><b>Oops.</b> Collection not found or some file chunks have expired.</span>
+      </div>
+    `
+
+    panel.prepend(alert)
+    return
+  }
 
   const name = meta.data.originalName
   const chunks = meta.data.chunks
@@ -57,7 +75,6 @@ async function loadCollectionConfig () {
     }
   })
 
-  document.getElementById('collection').innerText = collectionId
   document
     .getElementById('form')
     .addEventListener('submit', async (e) => {
@@ -73,6 +90,8 @@ async function loadCollectionConfig () {
       log('All done.')
       setEnable(true)
     })
+
+  setEnable(true)
 }
 
 async function downloadCollectionParallel (collectionId, meta, fprog, ftext, rows, row) {

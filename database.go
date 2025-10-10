@@ -130,6 +130,10 @@ func getCollection(collectionId string) *CollectionDetails {
 		collection.TotalSize += chunk.Size
 	}
 
+	if len(chunkIds) != len(chunks) {
+		return nil
+	}
+
 	collection.Chunks = chunks
 
 	return &collection
