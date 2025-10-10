@@ -65,16 +65,16 @@ async function uploadFileParallelStreaming (file, chunkSize, workers) {
     <div tabindex="0" class="collapse collapse-arrow bg-base-100 border-base-300 border">
       <div class="collapse-title font-semibold flex gap-6 items-center">
         <div id="fprog" class="radial-progress" style="--value: 0;" role="progressbar">0%</div>
-        <div class="flex flex-1 grow flex-col sm:flex-row gap-2">
+        <div class="flex flex-1 grow flex-col sm:flex-row gap-2 items-center">
           <div class="flex-1 grow">
             <p><strong>${file.name}</strong> • ${total} chunk(s)</p>
             <p id="ftext">0% • 0 / ${formatBytes(file.size)}</p>
           </div>
-          <div class="flex flex-col gap-2 items-end">
+          <div class="flex flex-col items-end">
             <span id="flink" class="flex items-center">
               <span class="loading loading-dots loading-xl"></span>
             </span>
-            <button class="btn" id="fbtn" disabled>Copy Link<button>
+            <button class="btn" id="fbtn" disabled>Copy Link</button>
           </div>
         </div>
       </div>
@@ -146,7 +146,9 @@ async function uploadFileParallelStreaming (file, chunkSize, workers) {
       const res = await fetch('/api/chunks', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/octet-stream'
+          'Content-Type': 'application/octet-stream',
+          'X-Thepool-Chunk-Order': i.toString(),
+          'X-haha': 'Do you wanna automate this? don\'t waste your time!'
         },
         body: metered,
         duplex: 'half'
@@ -166,7 +168,6 @@ async function uploadFileParallelStreaming (file, chunkSize, workers) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      collectionId: '',
       originalName: file.name,
       mimeType: file.type,
       chunkIds: results.join('')

@@ -51,5 +51,3 @@ const submit = document.getElementById('submit')
 const parallelEl = document.getElementById('parallel')
 const parallelCountEl = document.getElementById('parallel_count')
 const panel = document.getElementById('panel')
-
-loadConfig()

@@ -1,84 +1,50 @@
-const id = window.location.pathname.replace('/', '')
+const MB = 1024 * 1024
 
 parallelEl.addEventListener('input', () => {
   parallelCountEl.textContent = parallelEl.value
   submit.innerText = parallelEl.value > 1 ? 'Parallel Download' : 'Download'
 })
 
-document.getElementById('collection').value = id
-document
-  .getElementById('form')
-  .addEventListener('submit', async (e) => {
-    e.preventDefault()
+loadCollectionConfig()
+async function loadCollectionConfig () {
+  const collectionId = window.location.pathname.replace('/', '')
 
-    if (!id) {
-      log('No collection id.', { error: true })
-      return
-    }
-
-    setEnable(false)
-    
-    await downloadCollectionParallel(id, parallelEl.value)
-      .catch((err) => {
-        log(`Error for file: ${err?.message ?? err}`, { error: true })
-      })
-
-    log('All done.')
-    setEnable(true)
-  })
-
-async function downloadCollectionParallel (collectionId, workers) {
   log(`Fetching collection: ${collectionId}`)
   const meta = await fetch(`/api/collections/${encodeURIComponent(collectionId)}`)
     .then((res) => res.json())
 
-  const name = meta.data.originalName ?? `download-${collectionId}`
-  const mime = meta.data.mimeType ?? 'application/octet-stream'
-  const chunkIds = meta.data.chunkIds.match(/.{1,10}/g)
-  const total = chunkIds.length
+  const name = meta.data.originalName
+  const chunks = meta.data.chunks
+  const total = chunks.length
 
   log(`File: ${name} • ${total} chunk(s)`)
 
-  let saveHandle;
-  try{
-    saveHandle = await window.showSaveFilePicker({
-      suggestedName: name,
-      types: [{ accept: { [mime]: ['.'+name.split('.')[name.split('.').length - 1] ??'.bin'] } }],
-    });
-  }catch(err){
-    console.log(err)
-    submit.disabled = false;
-    log('Picker canceled.');
-    return;
-  }
-
   const box = document.createElement('div')
   box.innerHTML = `
-    <div tabindex="0" class="collapse collapse-arrow bg-base-100 border-base-300 border">
-      <div class="collapse-title font-semibold flex gap-6">
-        <div>
+    <div class="flex gap-6 items-center">
+      <div id="fprog" class="radial-progress" style="--value: 0;" role="progressbar">0%</div>
+      <div class="flex-1 grow">
           <p><strong>${name}</strong> • ${total} chunk(s)</p>
-          <p id="ftext">0 downloaded</p>
-        </div>
-      </div>
-      <div class="collapse-content text-sm">
-        <ul id="rows" class="list">
-          <li class="p-4 pb-2 text-xs opacity-60 tracking-wide">File chunks</li>
-        </ul>
+          <p id="ftext">0% • 0 / ${formatBytes(meta.data.totalSize)}</p>
       </div>
     </div>
+    <ul id="rows" class="list">
+      <li class="p-4 pb-2 text-xs opacity-60 tracking-wide">File chunks</li>
+    </ul>
   `
 
   panel.prepend(box)
+  const fprog = box.querySelector('#fprog')
   const ftext = box.querySelector('#ftext')
   const rows  = box.querySelector('#rows')
 
-  const row = chunkIds.map((cid, i) => {
+  const row = chunks.map((chunk, i) => {
     const li = document.createElement('li')
     li.innerHTML = `
       <div class="text-4xl font-thin opacity-30 tabular-nums">${(i+1).toString().padStart(2, '0')}</div>
       <div class="list-col-grow">
-        <div><span>Chunk #${i+1} (${cid}...): 0 B</span></div>
+        <div><span>Chunk #${i+1} (${chunk.id}): 0 / ${formatBytes(chunk.size)} (0%)</span></div>
+        <progress class="progress w-full" max="${chunk.size}" value="0"></progress>
       </div>
     `
 
@@ -86,9 +52,53 @@ async function downloadCollectionParallel (collectionId, workers) {
     li.classList.add('list-row')
 
     return {
+      prog: li.querySelector('progress'),
       txt: li.querySelector('span')
     }
   })
+
+  document.getElementById('collection').innerText = collectionId
+  document
+    .getElementById('form')
+    .addEventListener('submit', async (e) => {
+      e.preventDefault()
+
+      setEnable(false)
+      
+      await downloadCollectionParallel(collectionId, meta, fprog, ftext, row)
+        .catch((err) => {
+          log(`Error for file: ${err?.message ?? err}`, { error: true })
+        })
+
+      log('All done.')
+      setEnable(true)
+    })
+}
+
+async function downloadCollectionParallel (collectionId, meta, fprog, ftext, row) {
+  const workers = +parallelEl.value
+  const name = meta.data.originalName
+  const mime = meta.data.mimeType
+  const chunks = meta.data.chunks
+  const total = chunks.length
+
+  const slices = name.split('.')
+  const exts = '.' + slices[slices.length - 1]
+
+  const saveHandle = await window.showSaveFilePicker({
+    suggestedName: name,
+    types: [{
+      accept: {
+        [mime]: [exts ??'.bin']
+      }
+    }]
+  }).catch(() => undefined)
+
+  if (saveHandle === undefined) {
+    setEnable(false)
+    log('Picker canceled.')
+    return
+  }
 
   const root = await navigator.storage.getDirectory()
   const tmpDirName = `dl-${collectionId}-${Date.now()}`
@@ -97,7 +107,7 @@ async function downloadCollectionParallel (collectionId, workers) {
   let next = 0
   const tempFiles = new Array(total)
 
-  let downloaded = 0
+  let fileDownloaded = 0
   let lastReport = 0
   const REPORT_MS = 500
 
@@ -105,60 +115,83 @@ async function downloadCollectionParallel (collectionId, workers) {
     const now = performance.now()
 
     if (now - lastReport >= REPORT_MS){
-      ftext.textContent = `${formatBytes(downloaded)} downloaded`
+      ftext.textContent = `${formatBytes(fileDownloaded)} downloaded`
       lastReport = now
     }
   }
 
+  const { download } = await loadConfig()
+
+  function bumpFile (delta) {
+    fileDownloaded += delta
+    const pct = Math.floor(fileDownloaded / meta.data.totalSize * 100)
+    fprog.style.cssText = `--value: ${pct}`
+    fprog.textContent = `${pct}%`
+    ftext.textContent = `${pct}% • ${formatBytes(fileDownloaded)} / ${formatBytes(meta.data.totalSize)}`
+  }
+
   async function worker () {
-    while(true){
-      const i = next++;
-      if(i >= total) return;
-      const cid = chunkIds[i];
-      log(`start ${i+1}/${total} ${cid.slice(0,8)}…`);
+    while (true) {
+      const i = next++
+      if (i >= total) return
 
-      const { download } = await loadConfig()
-      const res = await fetch(`${download}/${encodeURIComponent(cid)}`);
-      if(!res.ok) throw new Error(`Chunk ${cid} missing or expired`);
+      const chunk = chunks[i]
 
-      const fh = await tmpDir.getFileHandle(`part-${String(i).padStart(8,'0')}`, { create: true });
-      const ws = await fh.createWritable();
+      log(`start ${i+1}/${total} ${chunk.id}...`)
 
-      const reader = res.body.getReader();
-      let loaded = 0;
-      while(true){
-        const {done, value} = await reader.read();
-        if(done) break;
-        await ws.write(value);
-        loaded += value.byteLength;
-        downloaded += value.byteLength;
-        row[i].txt.textContent = `Chunk #${i+1} (${cid.slice(0,8)}…): ${formatBytes(loaded)}`;
-        maybeReport();
+      const res = await fetch(`${download}/${encodeURIComponent(chunk.id)}`)
+      if(!res.ok) throw new Error(`Chunk ${chunk.id} missing or expired`)
+
+      const fh = await tmpDir.getFileHandle(`part-${String(i).padStart(8,'0')}`, { create: true })
+      const ws = await fh.createWritable()
+      const reader = res.body.getReader()
+      let chunkDownloaded = 0
+
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) break
+        
+        await ws.write(value)
+        const pct = Math.floor(chunkDownloaded / chunk.size * 100)
+        
+        chunkDownloaded += value.byteLength
+        row[i].prog.value = chunkDownloaded
+        row[i].txt.textContent = `Chunk #${i+1} (${chunk.id}): ${formatBytes(chunkDownloaded)} / ${formatBytes(chunk.size)} (${pct}%)`
+        
+        bumpFile(chunk.size)
+        maybeReport()
       }
-      await ws.close();
-      tempFiles[i] = fh;
-      log(`done  ${i+1}/${total}`);
+
+      await ws.close()
+
+      tempFiles[i] = fh
+      log(`done  ${i+1}/${total}`)
     }
   }
 
-  await Promise.all(Array.from({length: Math.min(workers, total)}, worker))
+  const workerSet = Array.from({ length: Math.min(workers, total) }, worker)
+  await Promise.all(workerSet)
 
   const out = await saveHandle.createWritable()
 
-  for (let i=0; i < total; i++) {
-    const file = await tempFiles[i].getFile()
+  for (const tempFile of tempFiles) {
+    const file = await tempFile.getFile()
     const reader = file.stream().getReader()
-    while(true){
-      const {done, value} = await reader.read()
-      if(done) break;
-      await out.write(value);
+
+    while (true) {
+      const { done, value } = await reader.read()
+
+      if (done) break
+      await out.write(value)
     }
-    await tmpDir.removeEntry(tempFiles[i].name)
+
+    await tmpDir.removeEntry(tempFile.name)
   }
 
   await out.close();
   await root.removeEntry(tmpDirName, { recursive: true })
 
-  ftext.textContent = `${formatBytes(downloaded)} downloaded`
+  ftext.textContent = `${formatBytes(fileDownloaded)} downloaded`
   log(`File complete: ${name}`)
 }

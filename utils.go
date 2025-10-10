@@ -23,6 +23,16 @@ func randID(n int) string {
 	return string(out)
 }
 
+func splitStringByN(str string, n int) []string {
+	result := []string{}
+
+	for i := 0; i < len(str); i += n {
+		result = append(result, str[i:i+n])
+	}
+
+	return result
+}
+
 func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)

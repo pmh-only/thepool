@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"strconv"
 )
 
 //
@@ -76,6 +77,25 @@ var createCollectionHandler = httpLog(http.HandlerFunc(func(w http.ResponseWrite
 }))
 
 var createChunkHandler = httpLogFn(func(w http.ResponseWriter, r *http.Request) {
+	chunkOrderRaw := r.Header["X-Thepool-Chunk-Order"]
+	if len(chunkOrderRaw) < 1 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"success": false,
+			"message": "no chunk order provided",
+		})
+		return
+	}
+
+	chunkOrder, err := strconv.ParseInt(chunkOrderRaw[0], 10, 64)
+
+	if err != nil || chunkOrder < 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"success": false,
+			"message": "Invalid chunk order",
+		})
+		return
+	}
+
 	limitedReader := &io.LimitedReader{
 		R: r.Body,
 		N: WEBSERVER_SIZE_LIMIT_MB*MB + 1,
@@ -86,7 +106,7 @@ var createChunkHandler = httpLogFn(func(w http.ResponseWriter, r *http.Request) 
 	}
 
 	chunkID := randID(10)
-	err := uploadChunk(chunkID, countableReader)
+	err = uploadChunk(chunkID, countableReader)
 
 	if err != nil {
 		deleteChunks([]string{chunkID})
@@ -106,7 +126,7 @@ var createChunkHandler = httpLogFn(func(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	createChunk(chunkID, countableReader.Bytes/MB+1)
+	createChunk(chunkID, countableReader.Bytes, chunkOrder)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"success": true,
 		"id":      chunkID,

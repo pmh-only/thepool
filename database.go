@@ -2,7 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"strings"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -31,14 +33,14 @@ func createMysqlConnection() {
 	}
 }
 
-func createChunk(chunkId string, chunkSizeMB int64) {
-	stmt, err := db.Prepare("INSERT INTO chunks (chunk_id, chunk_size_mb) VALUES (?, ?)")
+func createChunk(chunkId string, chunkSize int64, chunkOrder int64) {
+	stmt, err := db.Prepare("INSERT INTO chunks (chunk_id, chunk_size, chunk_order) VALUES (?, ?, ?)")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	defer stmt.Close()
-	_, err = stmt.Exec(chunkId, chunkSizeMB)
+	_, err = stmt.Exec(chunkId, chunkSize, chunkOrder)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -64,7 +66,7 @@ func createCollection(collection Collection) {
 	}
 }
 
-func getCollection(collectionId string) *Collection {
+func getCollection(collectionId string) *CollectionDetails {
 	stmt, err := db.Prepare("SELECT * FROM collections WHERE collection_id = ?")
 	if err != nil {
 		log.Fatal(err)
@@ -72,12 +74,17 @@ func getCollection(collectionId string) *Collection {
 
 	defer stmt.Close()
 
-	var collection Collection
+	collection := CollectionDetails{
+		TotalSize: 0,
+	}
+
+	var chunkIdsRaw string
+
 	err = stmt.QueryRow(collectionId).Scan(
 		&collection.CollectionId,
 		&collection.OriginalName,
 		&collection.MimeType,
-		&collection.ChunkIds)
+		&chunkIdsRaw)
 
 	if err == sql.ErrNoRows {
 		return nil
@@ -86,6 +93,44 @@ func getCollection(collectionId string) *Collection {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	chunks := []Chunk{}
+	chunkIds := splitStringByN(chunkIdsRaw, 10)
+	chunkIdsAny := make([]any, len(chunkIds))
+	for i, chunkId := range chunkIds {
+		chunkIdsAny[i] = chunkId
+	}
+
+	query := fmt.Sprintf(
+		"SELECT chunk_id, chunk_size FROM chunks WHERE chunk_id IN (%s ?) ORDER BY chunk_order",
+		strings.Repeat("?, ", len(chunkIds)-1),
+	)
+
+	stmt2, err := db.Prepare(query)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer stmt2.Close()
+
+	rows, err := stmt2.Query(chunkIdsAny...)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for rows.Next() {
+		var chunk Chunk
+
+		err := rows.Scan(&chunk.ChunkId, &chunk.Size)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		chunks = append(chunks, chunk)
+		collection.TotalSize += chunk.Size
+	}
+
+	collection.Chunks = chunks
 
 	return &collection
 }
