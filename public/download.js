@@ -87,7 +87,6 @@ async function loadCollectionConfig () {
           log(`Error for file: ${err?.message ?? err}`, { error: true })
         })
 
-      log('All done.')
       setEnable(true)
     })
 
@@ -229,5 +228,5 @@ async function downloadCollectionParallel (collectionId, meta, fprog, ftext, row
   rows.removeChild(li)
 
   ftext.textContent = `${formatBytes(fileDownloaded)} downloaded`
-  log(`File complete: ${name}`)
+  log(`File complete: ${name}`, { success: true })
 }
