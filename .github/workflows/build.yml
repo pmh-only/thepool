@@ -48,6 +48,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
+          context: .
+          file: ./Dockerfile
           platforms: linux/arm64,linux/amd64
           tags: ghcr.io/pmh-only/thepool:latest
           cache-from: type=gha
