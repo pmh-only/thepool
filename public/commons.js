@@ -15,19 +15,9 @@ function setEnable (enabled = true) {
   document.getElementById('submit').disabled = !enabled
 }
 
-let _loadconfig_cache = undefined
-
 async function loadConfig () { 
-  if (_loadconfig_cache === undefined)
-    _loadconfig_cache = await fetch('/api/config')
-      .then((r) => r.json())
-  
-  if (_loadconfig_cache?.chunkSize === undefined)
-    throw new Error('Load config failed')
-
-  log('Config loaded.')
-
-  return _loadconfig_cache
+  return await fetch('/api/config')
+    .then((r) => r.json())
 }
 
 function formatBytes(n){
@@ -51,3 +41,14 @@ const submit = document.getElementById('submit')
 const parallelEl = document.getElementById('parallel')
 const parallelCountEl = document.getElementById('parallel_count')
 const panel = document.getElementById('panel')
+
+const originalFetch = window.fetch
+
+window.fetch = (url, option) =>
+  originalFetch(url, {
+    ...option,
+    headers: {
+      ...(option?.headers ?? {}),
+      Authorization: 'Bearer ' + window.sessionStorage.getItem('SESSION_TOKEN')
+    }
+  })

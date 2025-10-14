@@ -19,6 +19,10 @@ var indexViewHandler = httpLogFn(func(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, filepath.Join("./views", "index.html"))
 })
 
+var callbackViewHandler = httpLogFn(func(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, filepath.Join("./views", "callback.html"))
+})
+
 var downloadViewHandler = httpLogFn(func(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	collection := getCollection(id)
@@ -62,9 +66,14 @@ var staticAssetsHandler = httpLog(
 // api endpoints
 
 var configStatusHandler = httpLog(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	token := r.Header.Get("Authorization")
+	isVaildToken := isVaildToken(token)
+
 	writeJSON(w, http.StatusOK, map[string]any{
-		"chunkSize": WEBSERVER_SIZE_LIMIT_MB,
-		"download":  WEBSERVER_STATIC_ENDPOINT_PREFIX,
+		"chunkSize":          WEBSERVER_SIZE_LIMIT_MB,
+		"download":           WEBSERVER_STATIC_ENDPOINT_PREFIX,
+		"isVaildToken":       isVaildToken,
+		"authenticationLink": createAuthenticationLink(),
 	})
 }))
 
@@ -87,6 +96,17 @@ var getCollectionHandler = httpLog(http.HandlerFunc(func(w http.ResponseWriter, 
 }))
 
 var createCollectionHandler = httpLog(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	token := r.Header.Get("Authorization")
+	isVaildToken := isVaildToken(token)
+
+	if !isVaildToken {
+		writeJSON(w, http.StatusForbidden, map[string]any{
+			"success": false,
+			"message": "session token invalid",
+		})
+		return
+	}
+
 	id := randID(10)
 
 	var payload Collection
@@ -108,6 +128,17 @@ var createCollectionHandler = httpLog(http.HandlerFunc(func(w http.ResponseWrite
 }))
 
 var createChunkHandler = httpLogFn(func(w http.ResponseWriter, r *http.Request) {
+	token := r.Header.Get("Authorization")
+	isVaildToken := isVaildToken(token)
+
+	if !isVaildToken {
+		writeJSON(w, http.StatusForbidden, map[string]any{
+			"success": false,
+			"message": "session token invalid",
+		})
+		return
+	}
+
 	chunkOrderRaw := r.Header["X-Thepool-Chunk-Order"]
 	if len(chunkOrderRaw) < 1 {
 		writeJSON(w, http.StatusBadRequest, map[string]any{
@@ -197,5 +228,24 @@ var createChunkHandler = httpLogFn(func(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"success": true,
 		"id":      chunkID,
+	})
+})
+
+var getTokenHandler = httpLogFn(func(w http.ResponseWriter, r *http.Request) {
+	code := r.PathValue("code")
+	isUserInGuild := isUserInGuild(code)
+
+	if !isUserInGuild {
+		writeJSON(w, http.StatusForbidden, map[string]any{
+			"success": false,
+			"message": "user is not registered",
+		})
+		return
+	}
+
+	token := getVaildToken()
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success": true,
+		"token":   token,
 	})
 })

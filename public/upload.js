@@ -21,6 +21,29 @@ document
     const workers = parallelEl.value
     const chunkSize = (config.chunkSize ?? 5) * 1024 * 1024
 
+    if (!config.isVaildToken) {
+      log('Start token exchange')
+      const bc = new BroadcastChannel("token_exchange_channel")
+      const exchangeJob = new Promise((resolve) => {
+        bc.addEventListener('message', ({ data }) => {
+          resolve(data)
+          bc.close()
+        })
+      })
+
+      window.open(config.authenticationLink, '_blank').focus()
+
+      const data = await exchangeJob
+
+      if (!data.success) {
+        log('Token exchange failed', { error: true })
+        setEnable(true)
+        return
+      }
+
+      window.sessionStorage.setItem('SESSION_TOKEN', data.token)
+    }
+
     for (const file of files){
       await uploadFileParallelStreaming(file, chunkSize, workers)
         .catch((err) => {

@@ -11,10 +11,13 @@ func openWebserver() {
 
 	mux.Handle("GET /", indexViewHandler)
 	mux.Handle("GET /{id}", downloadViewHandler)
+	mux.Handle("GET /auth/callback", callbackViewHandler)
+
 	mux.Handle("GET /lib/{path...}", staticLibrariesHandler)
 	mux.Handle("GET /assets/{path...}", staticAssetsHandler)
 
 	mux.Handle("GET /api/config", configStatusHandler)
+	mux.Handle("GET /api/token/{code}", getTokenHandler)
 	mux.Handle("GET /api/collections/{id}", getCollectionHandler)
 	mux.Handle("POST /api/collections", createCollectionHandler)
 	mux.Handle("POST /api/chunks", createChunkHandler)
@@ -32,9 +35,8 @@ func openWebserver() {
 		TLSConfig:    tlsCfg,
 	}
 
-	cert := "/tmp/cert.pem"
-	key := "/tmp/key.pem"
-
 	log.Printf("listening on https://localhost:%s", WEBSERVER_PORT)
-	log.Fatal(srv.ListenAndServeTLS(cert, key))
+	log.Fatal(srv.ListenAndServeTLS(
+		WEBSERVER_TLS_CERT_PATH,
+		WEBSERVER_TLS_KEY_PATH))
 }
