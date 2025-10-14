@@ -1,2 +1,12 @@
-Dockerfile
-.dockerignore
+.git
+**/*_test.go
+node_modules/.cache
+.tmp
+dist
+build
+
+!node_modules
+!public
+!views
+!tmp
+app
