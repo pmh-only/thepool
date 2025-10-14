@@ -25,6 +25,8 @@ jobs:
           npm ci --ignore-scripts
           npm run build
           npm prune --omit=dev --ignore-scripts
+        env:
+          TAILWIND_DISABLE_OXIDE: '1'
 
       - run: |
           mkdir -p tmp
