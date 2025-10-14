@@ -1,3 +1,15 @@
+FROM --platform=$TARGETPLATFORM node:alpine AS assets
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+
+RUN --mount=type=cache,target=/root/.npm npm ci
+
+COPY public/ ./public/
+COPY views/ ./views/
+
+RUN npm run build && npm prune --omit=dev
+
 FROM scratch
 
 ARG TARGETARCH
@@ -8,10 +20,10 @@ USER $user:$group
 WORKDIR /app
 
 COPY --chown=$user:$group app-linux-${TARGETARCH} /app/main
-
 COPY --chown=$user:$group tmp/ /tmp/
+
+COPY --from=assets --chown=$user:$group /app/public/ ./public/
+COPY --from=assets --chown=$user:$group /app/node_modules/ ./node_modules/
 COPY --chown=$user:$group views/ ./views/
-COPY --chown=$user:$group public/ ./public/
-COPY --chown=$user:$group node_modules/ ./node_modules/
 
 ENTRYPOINT ["/app/main"]
