@@ -4,6 +4,11 @@
   themes: coffee --default;
 }
 
+html {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
 body {
   font-family: 'Roboto Variable', sans-serif;
   height: 100vh;
