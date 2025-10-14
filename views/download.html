@@ -4,12 +4,42 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 
-    <title>thepool: parallel streaming download</title>
+    <title>{{file_name}} - thepool.</title>
 
     <link rel="stylesheet" href="/assets/style.output.css">
     <link rel="stylesheet" href="/lib/@fontsource/vt323/index.css">
     <link rel="stylesheet" href="/lib/@fontsource-variable/roboto/index.css">
     <link rel="stylesheet" href="/lib/@fontsource-variable/merriweather/index.css">
+
+    <link rel="shortcut icon" href="/assets/favicon.webp" type="image/webp">
+
+    <meta name="description" content="{{chunk_count}} chunk found. {{mime_type}}. {{total_size}}" />
+    <meta name="keywords" content="thepool, file, file share, file upload, file download, parallel upload, parallel download" />
+    <meta name="author" content="Minhyeok Park" />
+    <meta name="robots" content="noindex" />
+
+    <meta content="{{file_name}} - thepool." property="og:title" />
+    <meta content="{{chunk_count}} chunk found. {{mime_type}}. {{total_size}}" property="og:description" />
+    <meta content="https://pool.pmh.codes" property="og:url" />
+    <meta content="https://pmh.codes/assets/favicon.webp" property="og:image" />
+    <meta content="website" property="og:type" />
+    <meta content="id: {{collection_id}}" property="og:site_name" />
+    <meta content="512" property="og:image:width" />
+    <meta content="512" property="og:image:height" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@pmh_only" />
+    <meta name="twitter:creator" content="@pmh_only" />
+    <meta name="twitter:title" content="{{file_name}} - thepool." />
+    <meta name="twitter:description" content="{{chunk_count}} chunk found. {{mime_type}}. {{total_size}}" />
+    <meta name="twitter:image" content="https://pool.pmh.codes/assets/favicon.webp" />
+
+    <meta content="#ffaaaa" name="theme-color" />
+    <meta name="msapplication-TileColor" content="#c59f61" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    
+    <link rel="manifest" href="/assets/manifest.json" />
   </head>
   <body>
     <nav class="navbar bg-base-100 shadow-sm">

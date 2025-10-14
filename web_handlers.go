@@ -2,21 +2,52 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 //
-// static endpoints
+// view endpoints
 
 var indexViewHandler = httpLogFn(func(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, filepath.Join("./views", "index.html"))
 })
 
 var downloadViewHandler = httpLogFn(func(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, filepath.Join("./views", "download.html"))
+	id := r.PathValue("id")
+	collection := getCollection(id)
+
+	viewFile := filepath.Join("./views", "download.html")
+	viewContentRaw, err := os.ReadFile(viewFile)
+	if err != nil {
+		log.Fatalf("Error reading file: %v", err)
+	}
+
+	viewContent := string(viewContentRaw)
+	if collection == nil {
+		collection = &CollectionDetails{
+			OriginalName: "file not found",
+			Chunks:       []Chunk{},
+			MimeType:     "application/octet-stream",
+			TotalSize:    0,
+		}
+	}
+
+	viewContent = strings.ReplaceAll(viewContent, "{{collection_id}}", id)
+	viewContent = strings.ReplaceAll(viewContent, "{{file_name}}", collection.OriginalName)
+	viewContent = strings.ReplaceAll(viewContent, "{{chunk_count}}", fmt.Sprint(len(collection.Chunks)))
+	viewContent = strings.ReplaceAll(viewContent, "{{total_size}}", byteSize(collection.TotalSize))
+	viewContent = strings.ReplaceAll(viewContent, "{{mime_type}}", fmt.Sprint(collection.MimeType))
+
+	w.Header().Set("Content-Type", "text/html;charset=utf-8")
+	w.WriteHeader(200)
+	w.Write([]byte(viewContent))
 })
 
 var staticLibrariesHandler = httpLog(

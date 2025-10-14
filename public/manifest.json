@@ -1,0 +1,21 @@
+{
+  "name": "thepool. - unlimited file share",
+  "short_name": "thepool.",
+  "description": "thepool is a file sharing service with unlimited file sizes and reliable parallel upload/download capabilities.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#261b25",
+  "theme_color": "#c59f61",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/assets/favicon.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    }
+  ]
+}
