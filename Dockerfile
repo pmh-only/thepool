@@ -1,4 +1,4 @@
-FROM --platform=$TARGETPLATFORM node:alpine AS assets
+FROM node:alpine AS assets
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -20,7 +20,7 @@ USER $user:$group
 WORKDIR /app
 
 COPY --chown=$user:$group app-linux-${TARGETARCH} /app/main
-COPY --chown=$user:$group tmp/ /tmp/
+COPY --chown=$user:$group cert.pem key.pem /tmp/
 
 COPY --from=assets --chown=$user:$group /app/public/ ./public/
 COPY --from=assets --chown=$user:$group /app/node_modules/ ./node_modules/
