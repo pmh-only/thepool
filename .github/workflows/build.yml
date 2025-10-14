@@ -21,12 +21,12 @@ jobs:
           node-version: '24'
           cache: 'npm'
 
+      - run: npm i -D @tailwindcss/oxide-wasm32-wasi
+
       - run: |
-          npm ci --ignore-scripts
+          npm ci
           npm run build
-          npm prune --omit=dev --ignore-scripts
-        env:
-          TAILWIND_DISABLE_OXIDE: '1'
+          npm prune --omit=dev
 
       - run: |
           mkdir -p tmp
