@@ -37,6 +37,8 @@ async function loadCollectionConfig () {
 
   log(`File: ${name} • ${total} chunk(s)`)
 
+  parallelEl.max = Math.min(meta.data.chunks.length, 12)
+
   const box = document.createElement('div')
   box.innerHTML = `
     <div class="flex gap-6 items-center">
