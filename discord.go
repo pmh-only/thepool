@@ -27,6 +27,7 @@ func createAuthenticationLink() string {
 
 func isUserInGuild(code string) bool {
 	accessToken := getAccessTokenFromCode(code)
+	log.Println("accesstoken", accessToken)
 	doesGuildExist := doesGuildExist(accessToken, DISCORD_TARGET_GUILD_ID)
 
 	revokeAccessToken(accessToken)
