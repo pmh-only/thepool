@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -44,6 +43,8 @@ func getAccessTokenFromCode(code string) string {
 		AccessToken string `json:"access_token"`
 	}
 
+	log.Println(u)
+
 	res, err := httpClient.PostForm(u, url.Values{
 		"grant_type":   {"authorization_code"},
 		"code":         {code},
@@ -51,17 +52,13 @@ func getAccessTokenFromCode(code string) string {
 	})
 
 	if err != nil {
+		log.Println(err.Error())
 		return ""
 	}
 
-	str, err := io.ReadAll(res.Body)
+	err = json.NewDecoder(res.Body).Decode(&resp)
 	if err != nil {
-		return ""
-	}
-	log.Println(string(str))
-
-	err = json.Unmarshal(str, &resp)
-	if err != nil {
+		log.Println(err.Error())
 		return ""
 	}
 
@@ -87,6 +84,7 @@ func doesGuildExist(accessToken, guildId string) bool {
 
 	req, err := http.NewRequest("GET", "https://discord.com/api/v10/users/@me/guilds", nil)
 	if err != nil {
+		log.Println(err.Error())
 		return false
 	}
 
@@ -94,11 +92,13 @@ func doesGuildExist(accessToken, guildId string) bool {
 	res, err := httpClient.Do(req)
 
 	if err != nil {
+		log.Println(err.Error())
 		return false
 	}
 
 	err = json.NewDecoder(res.Body).Decode(&resp)
 	if err != nil {
+		log.Println(err.Error())
 		return false
 	}
 
