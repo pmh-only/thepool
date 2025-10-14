@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -27,7 +28,6 @@ func createAuthenticationLink() string {
 
 func isUserInGuild(code string) bool {
 	accessToken := getAccessTokenFromCode(code)
-	log.Println("accesstoken", accessToken)
 	doesGuildExist := doesGuildExist(accessToken, DISCORD_TARGET_GUILD_ID)
 
 	revokeAccessToken(accessToken)
@@ -54,7 +54,13 @@ func getAccessTokenFromCode(code string) string {
 		return ""
 	}
 
-	err = json.NewDecoder(res.Body).Decode(&resp)
+	str, err := io.ReadAll(res.Body)
+	if err != nil {
+		return ""
+	}
+	log.Println(string(str))
+
+	err = json.Unmarshal(str, &resp)
 	if err != nil {
 		return ""
 	}
