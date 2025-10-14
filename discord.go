@@ -43,8 +43,6 @@ func getAccessTokenFromCode(code string) string {
 		AccessToken string `json:"access_token"`
 	}
 
-	log.Println(u)
-
 	res, err := httpClient.PostForm(u, url.Values{
 		"grant_type":   {"authorization_code"},
 		"code":         {code},

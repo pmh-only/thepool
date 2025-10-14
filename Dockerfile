@@ -23,7 +23,7 @@ RUN npm run build
 
 FROM alpine AS library
 
-RUN apk add --no-cache npm
+RUN apk add --no-cache npm ca-certificates
 
 WORKDIR /app
 
@@ -37,6 +37,9 @@ ARG group=1000
 
 USER $user:$group
 WORKDIR /app
+
+COPY --from=library /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 COPY --from=build --chown=$user:$group /tmp/ /tmp/
 COPY --from=build --chown=$user:$group /app/main .
