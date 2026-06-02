@@ -44,11 +44,11 @@ const panel = document.getElementById('panel')
 
 const originalFetch = window.fetch
 
-window.fetch = (url, option) =>
+window.fetch = (url, option, auth=true) =>
   originalFetch(url, {
     ...option,
     headers: {
       ...(option?.headers ?? {}),
-      Authorization: 'Bearer ' + window.sessionStorage.getItem('SESSION_TOKEN')
+      ...(auth ? { Authorization: 'Bearer ' + window.sessionStorage.getItem('SESSION_TOKEN') } : {})
     }
   })

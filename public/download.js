@@ -159,7 +159,7 @@ async function downloadCollectionParallel (collectionId, meta, fprog, ftext, row
 
       log(`start ${i+1}/${total} ${chunk.id}...`)
 
-      const res = await fetch(`${download}/${encodeURIComponent(chunk.id)}`)
+      const res = await fetch(`${download}/${encodeURIComponent(chunk.id)}`, {}, false)
       if(!res.ok) throw new Error(`Chunk ${chunk.id} missing or expired`)
 
       const fh = await tmpDir.getFileHandle(`part-${String(i).padStart(8,'0')}`, { create: true })
